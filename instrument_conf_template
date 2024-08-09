@@ -1,0 +1,9 @@
+# Add instrument env into process
+# For example, add the following environment variables to all Java applications
+#[java]
+#JAVA_TOOL_OPTIONS = xxxxx
+#OTEL_EXPORTER_OTLP_ENDPOINT=xxxxx
+#OTEL_EXPORTER_OTLP_PROTOCOL=xxxxx
+#OTEL_TRACES_EXPORTER=xxxxx
+#OTEL_TRACES_SAMPLER=xxxxx
+
