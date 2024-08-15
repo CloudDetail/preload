@@ -12,3 +12,22 @@
 使用 `make dist` 创建安装文件, 执行 `bash install.sh` 安装到本地
 
 使用 `make release` 创建 `install-apo-instrument.tar.gz` 安装包, 用于在其他机器上安装
+
+## 在虚拟机上使用
+
+执行 install.sh 结束后即对所有程序的启动命令生效
+
+## 在Docker容器内使用
+
+在宿主机上完成安装后,启动容器时添加下面的参数
+
+-v /etc/originx:/etc/originx
+-e LD_PRELOAD=/etc/originx/instrument/liboriginxlanucher.so
+
+例如原始启动命令为:
+    docker run -d exampleApp:tag
+修改成:
+    docker run -d \
+        -v /etc/originx:/etc/originx \
+        -e LD_PRELOAD=/etc/originx/instrument/liboriginxlanucher.so \
+        exampleApp:tag
