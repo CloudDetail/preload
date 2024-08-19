@@ -21,8 +21,8 @@
 
 在宿主机上完成安装后,启动容器时添加下面的参数
 
-    -v /etc/originx:/etc/originx
-    -e LD_PRELOAD=/etc/originx/instrument/liboriginxlanucher.so
+    -v /etc/apo:/etc/apo
+    -e LD_PRELOAD=/etc/apo/instrument/libapolanucher.so
 
 其中 -v 用于挂载探针文件, -e 用于加载Preload库
 
@@ -33,6 +33,6 @@
 修改成:
 
     docker run -d \
-        -v /etc/originx:/etc/originx \
-        -e LD_PRELOAD=/etc/originx/instrument/liboriginxlanucher.so \
+        -v /etc/apo:/etc/apo \
+        -e LD_PRELOAD=/etc/apo/instrument/libapolanucher.so \
         exampleApp:tag
