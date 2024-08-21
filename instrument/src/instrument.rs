@@ -1,7 +1,8 @@
+use std::collections::HashMap;
 use std::{ffi::CString, os::raw::c_char};
 
 use crate::auto_svc_name::auto_discover_service_name;
-use crate::inspector::{inspect, read_instrument_env_from_conf};
+use crate::inspector::{get_language_type_name, inspect, read_instrument_env_from_conf};
 
 pub struct InstrumentResult {
     pub envp: *const *const c_char,
@@ -14,14 +15,19 @@ pub fn instrument(
 ) -> Option<InstrumentResult> {
     let res = inspect(path, argv, envp)?;
 
-    // 读取要注入的环境变量
-    let mut new_env_vars = read_instrument_env_from_conf(res.language_type)?;
-
-    // 自动生成服务名
+    // 内部自定义变量
+    let mut internal_vars: HashMap<&str, String> = HashMap::new();
+    // 自动生成服务名并填充到自定义变量
     let service_name = auto_discover_service_name(&res);
     if let Some(svc_name) = service_name {
-        new_env_vars.push(format!("{}={}", "OTEL_SERVICE_NAME", svc_name));
+        internal_vars.insert("APO_AUTO_SERVICE_NAME", svc_name);
+    }else{
+        internal_vars.insert("APO_AUTO_SERVICE_NAME", get_language_type_name(res.language_type));
     }
+
+    // 读取要注入的环境变量
+    let new_env_vars = read_instrument_env_from_conf(res.language_type,internal_vars)?;
+
     // 将新环境变量拷贝到原始环境变量中
     let env_idx = res.original_envp.len();
     let instrumented_envp = copy_instrument_env(env_idx, envp, new_env_vars);

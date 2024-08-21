@@ -1,6 +1,7 @@
+use ini::Ini;
 use std::ffi::CStr;
 use std::os::raw::c_char;
-use ini::Ini;
+use std::collections::HashMap;
 
 pub const UNKNOWN_LANGUAGE: i32 = 0;
 pub const JAVA_LANGUAGE: i32 = 1;
@@ -17,41 +18,68 @@ pub struct InspectResult {
     pub original_argv: Vec<String>,
 }
 
-pub fn read_instrument_env_from_conf(language_type: i32) -> Option<Vec<String>>  {
+pub fn get_language_type_name(language_type: i32) -> String {
+    match language_type {
+        JAVA_LANGUAGE => {
+            return "java".to_string();
+        }
+        PYTHON_LANGUAGE => {
+            return "python".to_string();
+        }
+        DOTNET_LANGUAGE => {
+            return "dotnet".to_string();
+        }
+        NODEJS_LANGUAGE => {
+            return "nodejs".to_string();
+        }
+        _ => {
+            return "unknown".to_string();
+        }
+    }
+}
+
+pub fn read_instrument_env_from_conf(
+    language_type: i32,
+    internal_vars: HashMap<&str, String>,
+) -> Option<Vec<String>> {
     let conf = Ini::load_from_file("/etc/apo/instrument/libapoinstrument.conf");
     match conf {
         Ok(ini) => {
             let section;
             match language_type {
                 JAVA_LANGUAGE => {
-                    section =  ini.section(Some("java"))?;
+                    section = ini.section(Some("java"))?;
                 }
                 PYTHON_LANGUAGE => {
-                    section =  ini.section(Some("python"))?;
+                    section = ini.section(Some("python"))?;
                 }
                 DOTNET_LANGUAGE => {
-                    section =  ini.section(Some("dotnet"))?;
+                    section = ini.section(Some("dotnet"))?;
                 }
                 NODEJS_LANGUAGE => {
-                    section =  ini.section(Some("nodejs"))?;
+                    section = ini.section(Some("nodejs"))?;
                 }
-                _ => {
-                    return None
-                }
+                _ => return None,
             }
 
             let mut res = vec![];
             section.iter().for_each(|(k, v)| {
-                res.push(format!("{}={}", k, v))
+                let trimmed_value = v.trim();
+                if trimmed_value.starts_with("{{") && trimmed_value.ends_with("}}") {
+                    let mut dynamic_value = trimmed_value.trim_matches(|c| c == '{' || c == '}').to_string();
+                    for (internal_key,internal_value) in &internal_vars  {
+                        dynamic_value = dynamic_value.replace(internal_key, internal_value)
+                    }
+                    res.push(format!("{}={}", k, v))
+                }else{
+                    res.push(format!("{}={}", k, v))
+                }
             });
             Some(res)
         }
-        Err(_) => {
-            return None
-        }
+        Err(_) => return None,
     }
 }
-
 
 // inspect 在解析argv和envp后,返回程序类型和envp的长度(用于后续更新envp)
 pub fn inspect(
@@ -73,7 +101,7 @@ pub fn inspect(
                     Ok(s) => s,
                     Err(_) => {
                         return None;
-                    },
+                    }
                 };
                 envps.push(argv_str.to_string());
                 if language_type == UNKNOWN_LANGUAGE {
@@ -93,17 +121,19 @@ pub fn inspect(
         if !envp.is_null() {
             while !(*envp.add(env_idx)).is_null() {
                 let c_str = CStr::from_ptr(*envp.add(env_idx));
-                let env_str = match  c_str.to_str() {
+                let env_str = match c_str.to_str() {
                     Ok(s) => s,
                     Err(_) => {
                         return None;
-                    },
+                    }
                 };
                 argvs.push(env_str.to_string());
                 if env_str.contains(APO_INSTRUMENT_DISABLE_ENV) {
-                    return None
+                    return None;
                 }
-                if language_type == UNKNOWN_LANGUAGE && env_str.contains("ASPNET") || env_str.contains("DOTNET") {
+                if language_type == UNKNOWN_LANGUAGE && env_str.contains("ASPNET")
+                    || env_str.contains("DOTNET")
+                {
                     language_type = DOTNET_LANGUAGE;
                 }
                 env_idx += 1;
@@ -112,10 +142,10 @@ pub fn inspect(
     }
 
     if language_type == UNKNOWN_LANGUAGE {
-        return None
+        return None;
     }
 
-    Some(InspectResult{
+    Some(InspectResult {
         language_type: language_type,
         original_envp: argvs,
         original_argv: envps,
