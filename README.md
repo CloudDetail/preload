@@ -13,6 +13,16 @@
 
 使用 `make release` 创建 `install-apo-instrument.tar.gz` 安装包, 用于在其他机器上安装
 
+卸载方式:
+
+从 /etc/ld.so.preload 中移除 /etc/apo/instrument/libapolanucher.so 一行;
+如果只有这一行,也可以直接移除 /etc/ld.so.preload 文件;
+重启命令行后完全卸载.
+
+随后可以通过下面的命令清理剩余文件
+
+rm -r /etc/apo
+
 ## 在虚拟机上使用
 
 执行 install.sh 结束后即对所有程序的启动命令生效
