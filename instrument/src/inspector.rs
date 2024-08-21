@@ -70,7 +70,7 @@ pub fn read_instrument_env_from_conf(
                     for (internal_key,internal_value) in &internal_vars  {
                         dynamic_value = dynamic_value.replace(internal_key, internal_value)
                     }
-                    res.push(format!("{}={}", k, v))
+                    res.push(format!("{}={}", k, dynamic_value))
                 }else{
                     res.push(format!("{}={}", k, v))
                 }
