@@ -23,10 +23,9 @@ if [[ "$JAVA_AGENT_TYPE" == "SKYWALKING" ]]; then
     ini-merger /etc/apo/instrument/skywalking-java/libapoinstrument.conf /etc/apo/instrument/libapoinstrument.conf
 fi
 
-if [ -f "/etc/apo/instrumentations/custom/libapoinstrument.conf" ]; then
+if [ -f "/instrumentations/custom/libapoinstrument.conf" ]; then
     echo "检测到用户自定义探针, 加载自定义探针配置文件"
     ini-merger /instrumentations/custom/libapoinstrument.conf /etc/apo/instrument/libapoinstrument.conf
-    cp -rf /etc/apo/custom/* /host/etc/apo/custom/.
 fi
 
 # 加载环境变量以更新配置文件
