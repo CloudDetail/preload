@@ -23,7 +23,7 @@ if [[ "$JAVA_AGENT_TYPE" == "SKYWALKING" ]]; then
     ini-merger /etc/apo/instrument/skywalking-java/libapoinstrument.conf /etc/apo/instrument/libapoinstrument.conf
 fi
 
-if [ -f "/instrumentations/custom/libapoinstrument.conf" ]; then
+if [ -z "$APO_DISABLE_CUSTOM_AGNET" ] && [ -f "/instrumentations/custom/libapoinstrument.conf" ]; then
     echo "检测到用户自定义探针, 加载自定义探针配置文件"
     ini-merger /instrumentations/custom/libapoinstrument.conf /etc/apo/instrument/libapoinstrument.conf
 fi
