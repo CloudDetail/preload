@@ -11,12 +11,15 @@ pub fn auto_discover_service_name(res: &InspectResult) -> Option<String> {
 
 // auto_discover_java_service_name
 // java [options] -jar AAA/BBB-CCC-1.0.0.jar [args...]
+// !!! java [options] -jar [options] xxx.jar [args...]
 //     -> bbb-ccc
 // java [options] classname [args...]
 //     -> classname
 fn auto_discover_java_service_name(argvs: &Vec<String>) -> Option<String> {
     let mut pre_argv: &String = &String::new();
     let mut java_cmd_start = false;
+    let mut jar_option_find = false;
+
     for argv in argvs {
         if !java_cmd_start {
             if argv.eq("java") {
@@ -27,7 +30,7 @@ fn auto_discover_java_service_name(argvs: &Vec<String>) -> Option<String> {
         }
 
         // 通过前一个参数,就能确定当前参数的内容的情况
-        if pre_argv.eq("-jar") {
+        if jar_option_find && argv.ends_with(".jar") {
             // AAA/BBB-CCC-1.0.0.jar -> bbb-ccc
             let version_pattern = r"-\d+(\.\d+)+(-SNAPSHOT)?";
             let re = Regex::new(version_pattern).unwrap();
@@ -67,6 +70,12 @@ fn auto_discover_java_service_name(argvs: &Vec<String>) -> Option<String> {
         // 分析当前参数,对分析毫无影响的情况
         if argv.starts_with("-D") || argv.starts_with("-X") || argv.starts_with("@") {
             // 忽略以 -D 和 -X 开头的参数
+            continue;
+        }
+
+        if argv.eq("-jar") {
+            jar_option_find = true;
+            pre_argv = argv;
             continue;
         }
 
