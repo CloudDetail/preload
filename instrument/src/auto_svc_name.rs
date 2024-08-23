@@ -29,6 +29,12 @@ fn auto_discover_java_service_name(argvs: &Vec<String>) -> Option<String> {
             continue;
         }
 
+        // 分析当前参数,对分析毫无影响的情况
+        if argv.starts_with("-D") || argv.starts_with("-X") || argv.starts_with("@") {
+            // 忽略以 -D 和 -X 开头的参数
+            continue;
+        }
+
         // 通过前一个参数,就能确定当前参数的内容的情况
         if jar_option_find && argv.ends_with(".jar") {
             // AAA/BBB-CCC-1.0.0.jar -> bbb-ccc
@@ -67,12 +73,6 @@ fn auto_discover_java_service_name(argvs: &Vec<String>) -> Option<String> {
             continue;
         }
 
-        // 分析当前参数,对分析毫无影响的情况
-        if argv.starts_with("-D") || argv.starts_with("-X") || argv.starts_with("@") {
-            // 忽略以 -D 和 -X 开头的参数
-            continue;
-        }
-
         if argv.eq("-jar") {
             jar_option_find = true;
             pre_argv = argv;
@@ -92,4 +92,3 @@ fn auto_discover_java_service_name(argvs: &Vec<String>) -> Option<String> {
     }
     None
 }
-
