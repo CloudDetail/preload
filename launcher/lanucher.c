@@ -25,6 +25,7 @@ void init_execve_apo(void)
     char *instrument_lib_path = "/etc/apo/instrument/libapoinstrument.so";
     void *handle = dlopen(instrument_lib_path, RTLD_NOW | RTLD_NODELETE);
     const char *error2 = dlerror();
+    // FIXME 目前加载instrument库失败后,没有正常通过system_apo_execve启动
     if (error2 != NULL || handle == NULL)
     {
         apo_execve_func = NULL;
