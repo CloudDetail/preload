@@ -26,6 +26,7 @@ jobs:
           yum -y update &&
           yum -y install gcc make &&
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
+          source ~/.cargo/env &&
           make release
           "
     - name: Upload to OSS
