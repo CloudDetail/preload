@@ -16,7 +16,13 @@ rm -f /host/etc/apo/instrument/libapolanucher.so
 
 # 拷贝最新的instrumentations包
 mkdir -p /host/etc/apo/instrument
-cp -rf /instrumentations /host/etc/apo/instrumentations
+rm -rf /host/etc/apo/instrumentations/dotnet
+rm -rf /host/etc/apo/instrumentations/java
+rm -rf /host/etc/apo/instrumentations/nodejs
+rm -rf /host/etc/apo/instrumentations/python
+rm -rf /host/etc/apo/instrumentations/skywalking
+rm -rf /host/etc/apo/instrumentations/custom
+cp -r /instrumentations/* /host/etc/apo/instrumentations
 
 if [[ "$JAVA_AGENT_TYPE" == "SKYWALKING" ]]; then
     echo "检测到环境变量 JAVA_AGENT_TYPE = SKYWALKING , 加载skywalking的配置文件"
