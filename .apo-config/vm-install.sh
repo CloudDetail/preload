@@ -15,7 +15,7 @@ rm -f /host/etc/apo/instrument/libapoinstrument.so
 rm -f /host/etc/apo/instrument/libapolanucher.so
 
 # 拷贝最新的instrumentations包
-mkdir -p /host/etc/apo/instrument
+mkdir -p /host/etc/apo/instrumentations
 rm -rf /host/etc/apo/instrumentations/dotnet
 rm -rf /host/etc/apo/instrumentations/java
 rm -rf /host/etc/apo/instrumentations/nodejs
@@ -38,6 +38,7 @@ fi
 ini-merger /etc/apo/instrument/libapoinstrument.conf
 
 # 拷贝新的instrument库
+mkdir -p /host/etc/apo/instrument
 cp -rf /etc/apo/instrument/* /host/etc/apo/instrument/
 
 # 拷贝新的/etc/ld.so.preload
