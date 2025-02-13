@@ -54,7 +54,7 @@ fn copy_instrument_env(
     env_idx: usize,
     envp: *const *const c_char,
     new_env_vars: Vec<String>,
-) -> *mut *const i8 {
+) -> *mut *const c_char {
     let new_envp: *mut *const c_char;
     let array = match std::alloc::Layout::array::<*const c_char>(env_idx + new_env_vars.len() + 1) {
         Ok(l) => l,
