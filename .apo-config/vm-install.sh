@@ -40,8 +40,10 @@ ini-merger /etc/apo/instrument/libapoinstrument.conf
 # 拷贝新的instrument库
 mkdir -p /host/etc/apo/instrument
 cp -rf /etc/apo/instrument/* /host/etc/apo/instrument/
+chmod -R 755 /host/etc/apo
 
 # 拷贝新的/etc/ld.so.preload
 cp /host/etc/apo/instrument/apo.ld.so.preload /host/etc/ld.so.preload
+chmod 755 /host/etc/ld.so.preload
 
 echo "apo-preload 安装完成"
