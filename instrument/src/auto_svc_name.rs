@@ -22,7 +22,7 @@ fn auto_discover_java_service_name(argvs: &Vec<String>) -> Option<String> {
 
     for argv in argvs {
         if !java_cmd_start {
-            if argv.eq("java") {
+            if argv.eq("java") || argv.ends_with("/java")  {
                 java_cmd_start = true;
                 pre_argv = argv
             }
