@@ -1,51 +1,65 @@
 # Preload
 
-用于挂载操作系统的`execve`函数,自动加载APM探针
+A system module that hooks into the operating system's `execve` function to automatically load APM (Application Performance Monitoring) agents.
 
-功能包括包括:
+Key Features:
 
-- 识别后续启动程序的语言类型
-- 检查语言对应的APM探针并使用注入需要的环境变量
-- (当前仅JAVA) 自动创建ServiceName
-- 继续程序启动流程
+- Automatically detects the programming language of target applications
+- Injects necessary environment variables based on the detected language-specific APM agent
+- Auto-generates ServiceName (currently Java only)
+- Maintains seamless program execution flow
 
-使用 `make dist` 创建安装文件, 执行 `bash install.sh` 安装到本地
+## Installation
 
-使用 `make release` 创建 `install-apo-instrument.tar.gz` 安装包, 用于在其他机器上安装
+- Run `make dist` to create installation files, then execute `bash install.sh` for local installation
+- Run `make release` to create `install-apo-instrument.tar.gz` package for deployment on other machines
 
-卸载方式:
+## Uninstallation
 
-从 /etc/ld.so.preload 中移除 /etc/apo/instrument/libapolanucher.so 一行;
-如果只有这一行,也可以直接移除 /etc/ld.so.preload 文件;
-重启命令行后完全卸载.
+Remove the following line from `/etc/ld.so.preload`:
+```
+/etc/apo/instrument/libapolanucher.so
+```
+If this is the only line in the file, you can safely remove the entire `/etc/ld.so.preload` file.
+Restart your terminal session to complete the uninstallation.
 
-**特殊情况**
-因为preload会在ssh登陆时加载,如果出现了ssh无法登录的情况,可以用scp拷贝空白文件来覆盖目标机器的/etc/ld.so.preload; 也可以完成卸载
+**Troubleshooting**
 
-随后可以通过下面的命令清理剩余文件
+If SSH access becomes unavailable due to preload issues, you can fix it by either:
+- Using `scp` to copy an empty file to overwrite `/etc/ld.so.preload` on the target machine
+- Completing the uninstallation process
 
+To clean up remaining files afterward:
+```
 rm -r /etc/apo
+```
 
-## 在虚拟机上使用
+## Usage in Virtual Machines
 
-执行 install.sh 结束后即对所有程序的启动命令生效
+The preload hook takes effect for all program executions immediately after running `install.sh`.
 
-## 在Docker容器内使用
+## Usage in Docker Containers
 
-在宿主机上完成安装后,启动容器时添加下面的参数
+After installing on the host machine, add these parameters when starting containers:
 
-    -v /etc/apo:/etc/apo
-    -e LD_PRELOAD=/etc/apo/instrument/libapolanucher.so
+```
+-v /etc/apo:/etc/apo
+-e LD_PRELOAD=/etc/apo/instrument/libapolanucher.so
+```
 
-其中 -v 用于挂载探针文件, -e 用于加载Preload库
+The `-v` flag mounts the agent files, while `-e` enables the preload library.
 
-例如原始启动命令为:
+Example:
 
-    docker run -d exampleApp:tag
+Original docker command:
+```
+docker run -d exampleApp:tag
+```
 
-修改成:
-
-    docker run -d \
-        -v /etc/apo:/etc/apo \
-        -e LD_PRELOAD=/etc/apo/instrument/libapolanucher.so \
-        exampleApp:tag
+Modified command:
+```
+docker run -d \
+    -v /etc/apo:/etc/apo \
+    -e LD_PRELOAD=/etc/apo/instrument/libapolanucher.so \
+    exampleApp:tag
+```
