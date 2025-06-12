@@ -24,7 +24,8 @@ launcher-lib:
 
 instrument-lib:
 	@echo "Generate libapoinstrument.so"
-	cd instrument && cargo build --release  && cp -f target/release/libapoinstrument.so ../build/.
+	cd instrument && cargo build --release && cp -f target/release/libapoinstrument* ../build/.
+	cd instrument && cross build --release --target x86_64-unknown-linux-musl && cp -f target/x86_64-unknown-linux-musl/release/libapoinstrument.so ../build/libapoinstrument_musl.so
 
 .PHOHY: instrument-conf
 instrument-conf:

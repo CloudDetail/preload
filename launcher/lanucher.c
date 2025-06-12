@@ -2,45 +2,63 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #include <stdio.h>
-#include <syslog.h>
+#include <string.h>
 #include <sys/syscall.h>
+
+#ifndef SYS_execve
+#define SYS_execve 59
+#endif
+
 typedef int (*execve_func)(const char *filename, char *const argv[], char *const envp[]);
 execve_func original_system_execve = NULL;
 
 typedef int (*extra_execve_func)(const char *filename, char *const argv[], char *const envp[], execve_func execve_shim);
 extra_execve_func apo_execve_func = NULL;
 
-void init_execve_apo(void) __attribute__((constructor));
 int system_execve_shim(const char *filename, char *const argv[], char *const envp[]);
 
+static int is_musl(void) {
+    FILE *f = fopen("/proc/self/maps", "r");
+    if (!f) return 0;
+    char line[512];
+    while (fgets(line, sizeof(line), f)) {
+        if (strstr(line, "ld-musl")) {
+            fclose(f);
+            return 1;
+        }
+    }
+    fclose(f);
+    return 0;
+}
+
+void init_execve_apo(void) __attribute__((constructor));
 void init_execve_apo(void)
 {
-    fprintf(stdin, "init_execve_apo\n");
-    original_system_execve = dlsym(RTLD_NEXT, "execve");
-    const char *error = dlerror();
-    if (error != NULL || original_system_execve == execve)
-    {
-        original_system_execve = NULL;
+    char *instrument_lib_path;
+    if (is_musl()) {
+        instrument_lib_path = "/etc/apo/instrument/libapoinstrument_musl.so";
+    } else {
+        original_system_execve = dlsym(RTLD_NEXT, "execve");
+        const char *error = dlerror();
+        if (error != NULL || original_system_execve == execve)
+        {
+            original_system_execve = NULL;
+        }
+        instrument_lib_path = "/etc/apo/instrument/libapoinstrument.so";
     }
-
-    fprintf(stdin, "load system execve success\n");
-    char *instrument_lib_path = "/etc/apo/instrument/libapoinstrument.so";
     void *handle = dlopen(instrument_lib_path, RTLD_NOW | RTLD_NODELETE);
     const char *error2 = dlerror();
-    // FIXME 目前加载instrument库失败后,没有正常通过system_apo_execve启动
     if (error2 != NULL || handle == NULL)
     {
         apo_execve_func = NULL;
         return;
     }
-    fprintf(stdin, "load apo instrument lib success\n");
     apo_execve_func = dlsym(handle, "apo_execve");
     const char *error3 = dlerror();
     if (error3 != NULL || apo_execve_func == NULL)
     {
         apo_execve_func = NULL;
     }
-    fprintf(stdin, "hook execve successfully\n");
     dlclose(handle);
 }
 
@@ -49,12 +67,10 @@ int execve(const char *filename, char *const argv[], char *const envp[])
     int res;
     if (apo_execve_func == NULL)
     {
-        fprintf(stdin, "execute system execve...\n");
         res = system_execve_shim(filename, argv, envp);
     }
     else
     {
-        fprintf(stdin, "execute apo execve...\n");
         res = apo_execve_func(filename, argv, envp, &system_execve_shim);
     }
     return res;
