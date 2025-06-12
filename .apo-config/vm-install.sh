@@ -12,6 +12,7 @@ if [ -f "/host/etc/ld.so.preload" ]; then
     mv /host/etc/ld.so.preload /host/etc/ld.so.preload.bak
 fi
 rm -f /host/etc/apo/instrument/libapoinstrument.so
+rm -f /host/etc/apo/instrument/libapoinstrument_musl.so
 rm -f /host/etc/apo/instrument/libapolanucher.so
 
 # 拷贝最新的instrumentations包

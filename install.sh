@@ -18,6 +18,7 @@ mkdir -p /etc/apo/instrument
 # !!! 在系统上已经存在 libapoinstrument.so/ibapolanucher.so的情况下
 # !!! 永远先删除已有的库文件,然后再进行替换
 rm -f /etc/apo/instrument/libapoinstrument.so
+rm -f /etc/apo/instrument/libapoinstrument_musl.so
 rm -f /etc/apo/instrument/libapolanucher.so
 cp -rf apo-instrument/* /etc/apo/instrument/.
 
