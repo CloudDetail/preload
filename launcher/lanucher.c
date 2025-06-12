@@ -15,6 +15,7 @@ int system_execve_shim(const char *filename, char *const argv[], char *const env
 
 void init_execve_apo(void)
 {
+    fprintf(stdin, "init_execve_apo\n");
     original_system_execve = dlsym(RTLD_NEXT, "execve");
     const char *error = dlerror();
     if (error != NULL || original_system_execve == execve)
@@ -22,6 +23,7 @@ void init_execve_apo(void)
         original_system_execve = NULL;
     }
 
+    fprintf(stdin, "load system execve success\n");
     char *instrument_lib_path = "/etc/apo/instrument/libapoinstrument.so";
     void *handle = dlopen(instrument_lib_path, RTLD_NOW | RTLD_NODELETE);
     const char *error2 = dlerror();
@@ -31,12 +33,14 @@ void init_execve_apo(void)
         apo_execve_func = NULL;
         return;
     }
+    fprintf(stdin, "load apo instrument lib success\n");
     apo_execve_func = dlsym(handle, "apo_execve");
     const char *error3 = dlerror();
     if (error3 != NULL || apo_execve_func == NULL)
     {
         apo_execve_func = NULL;
     }
+    fprintf(stdin, "hook execve successfully\n");
     dlclose(handle);
 }
 
@@ -45,10 +49,12 @@ int execve(const char *filename, char *const argv[], char *const envp[])
     int res;
     if (apo_execve_func == NULL)
     {
+        fprintf(stdin, "execute system execve...\n");
         res = system_execve_shim(filename, argv, envp);
     }
     else
     {
+        fprintf(stdin, "execute apo execve...\n");
         res = apo_execve_func(filename, argv, envp, &system_execve_shim);
     }
     return res;
