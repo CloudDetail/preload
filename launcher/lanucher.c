@@ -15,6 +15,8 @@ execve_func original_system_execve = NULL;
 typedef int (*extra_execve_func)(const char *filename, char *const argv[], char *const envp[], execve_func execve_shim);
 extra_execve_func apo_execve_func = NULL;
 
+typedef void (*constructor_instrument_func)(char *const argv[], char *const envp[]);
+
 int system_execve_shim(const char *filename, char *const argv[], char *const envp[]);
 
 static int is_musl(void) {
@@ -31,9 +33,30 @@ static int is_musl(void) {
     return 0;
 }
 
-void init_execve_apo(void) __attribute__((constructor));
-void init_execve_apo(void)
+static int current_process_may_need_instrument(void) {
+    FILE *f = fopen("/proc/self/cmdline", "r");
+    if (!f) return 0;
+    char cmdline[512];
+    size_t n = fread(cmdline, 1, sizeof(cmdline) - 1, f);
+    fclose(f);
+    if (n == 0) {
+        return 0;
+    }
+    for (size_t i = 0; i < n; i++) {
+        if (cmdline[i] == '\0') {
+            cmdline[i] = ' ';
+        }
+    }
+    cmdline[n] = '\0';
+    return strstr(cmdline, "java") != NULL
+        || strstr(cmdline, "python") != NULL
+        || strstr(cmdline, "node") != NULL;
+}
+
+void init_execve_apo(int argc, char **argv, char **envp) __attribute__((constructor));
+void init_execve_apo(int argc, char **argv, char **envp)
 {
+    (void)argc;
     char *instrument_lib_path;
     if (is_musl()) {
         instrument_lib_path = "/etc/apo/instrument/libapoinstrument_musl.so";
@@ -58,6 +81,15 @@ void init_execve_apo(void)
     if (error3 != NULL || apo_execve_func == NULL)
     {
         apo_execve_func = NULL;
+    }
+    if (current_process_may_need_instrument())
+    {
+        constructor_instrument_func constructor_instrument = dlsym(handle, "apo_instrument_current_process");
+        const char *error4 = dlerror();
+        if (error4 == NULL && constructor_instrument != NULL)
+        {
+            constructor_instrument(argv, envp);
+        }
     }
     dlclose(handle);
 }

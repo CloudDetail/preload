@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::{ffi::CString, os::raw::c_char};
+use std::path::Path;
 
 use crate::auto_svc_name::auto_discover_service_name;
 use crate::inspector::{get_language_type_name, inspect, read_instrument_env_from_conf};
@@ -14,19 +15,11 @@ pub fn instrument(
     envp: *const *const c_char,
 ) -> Option<InstrumentResult> {
     let res = inspect(path, argv, envp)?;
-
-    // 内部自定义变量
-    let mut internal_vars: HashMap<&str, String> = HashMap::new();
-    // 自动生成服务名并填充到自定义变量
-    let service_name = auto_discover_service_name(&res);
-    if let Some(svc_name) = service_name {
-        internal_vars.insert("APO_AUTO_SERVICE_NAME", svc_name);
-    }else{
-        internal_vars.insert("APO_AUTO_SERVICE_NAME", get_language_type_name(res.language_type));
+    let new_env_vars = build_instrument_env_vars(&res)?;
+    let new_env_vars = filter_new_env_vars(&res.original_envp, new_env_vars);
+    if new_env_vars.is_empty() {
+        return None;
     }
-
-    // 读取要注入的环境变量
-    let new_env_vars = read_instrument_env_from_conf(res.language_type,internal_vars)?;
 
     // 将新环境变量拷贝到原始环境变量中
     let env_idx = res.original_envp.len();
@@ -34,6 +27,82 @@ pub fn instrument(
     Some(InstrumentResult{
         envp: instrumented_envp,
     })
+}
+
+pub fn instrument_current_process(
+    argv: *const *const c_char,
+    envp: *const *const c_char,
+) {
+    if !is_container() {
+        return;
+    }
+
+    let res = match inspect(std::ptr::null(), argv, envp) {
+        Some(res) => res,
+        None => return,
+    };
+    let new_env_vars = match build_instrument_env_vars(&res) {
+        Some(vars) => vars,
+        None => return,
+    };
+    let new_env_vars = filter_new_env_vars(&res.original_envp, new_env_vars);
+
+    for env_var in new_env_vars {
+        if let Some((key, value)) = env_var.split_once('=') {
+            if std::env::var_os(key).is_none() {
+                std::env::set_var(key, value);
+            }
+        }
+    }
+}
+
+fn filter_new_env_vars(original_envp: &[String], new_env_vars: Vec<String>) -> Vec<String> {
+    let original_keys: HashSet<&str> = original_envp
+        .iter()
+        .filter_map(|env_var| env_var.split_once('=').map(|(key, _)| key))
+        .collect();
+
+    new_env_vars
+        .into_iter()
+        .filter(|env_var| {
+            let key = match env_var.split_once('=') {
+                Some((key, _)) => key,
+                None => return false,
+            };
+            !original_keys.contains(key)
+        })
+        .collect()
+}
+
+fn build_instrument_env_vars(res: &crate::inspector::InspectResult) -> Option<Vec<String>> {
+    // 内部自定义变量
+    let mut internal_vars: HashMap<&str, String> = HashMap::new();
+    // 自动生成服务名并填充到自定义变量
+    let service_name = auto_discover_service_name(res);
+    if let Some(svc_name) = service_name {
+        internal_vars.insert("APO_AUTO_SERVICE_NAME", svc_name);
+    }else{
+        internal_vars.insert("APO_AUTO_SERVICE_NAME", get_language_type_name(res.language_type));
+    }
+
+    // 读取要注入的环境变量
+    read_instrument_env_from_conf(res.language_type,internal_vars)
+}
+
+fn is_container() -> bool {
+    if Path::new("/.dockerenv").exists() || Path::new("/run/.containerenv").exists() {
+        return true;
+    }
+    match std::fs::read_to_string("/proc/1/cgroup") {
+        Ok(cgroup) => {
+            cgroup.contains("docker")
+                || cgroup.contains("kubepods")
+                || cgroup.contains("containerd")
+                || cgroup.contains("libpod")
+                || cgroup.contains("lxc")
+        }
+        Err(_) => false,
+    }
 }
 
 // store_instrument_record 保存操作进程记录到文件

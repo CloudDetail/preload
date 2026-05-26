@@ -1,7 +1,7 @@
 use std::os::raw::{c_char, c_int};
 
 mod instrument;
-use instrument::instrument;
+use instrument::{instrument, instrument_current_process};
 
 mod inspector;
 mod auto_svc_name;
@@ -25,4 +25,12 @@ pub extern "C" fn apo_execve(
     }
 
     return res;
+}
+
+#[no_mangle]
+pub extern "C" fn apo_instrument_current_process(
+    argv: *const *const c_char,
+    envp: *const *const c_char,
+) {
+    instrument_current_process(argv, envp);
 }

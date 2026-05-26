@@ -6,11 +6,43 @@ if [ ! -d "/etc/apo" ]; then
     exit 1
 fi
 
-# 移除宿主机上的/etc/ld.so.preload文件
+install_ld_so_preload() {
+    local preload_file="/host/etc/ld.so.preload"
+    local entry_file="/host/etc/apo/instrument/apo.ld.so.preload"
+    local tmp_file="${preload_file}.apo.tmp.$$"
+    local preload_entry
+
+    if [ ! -f "$entry_file" ]; then
+        echo "$entry_file 不存在, 无法更新 $preload_file"
+        exit 1
+    fi
+
+    preload_entry="$(grep -v '^[[:space:]]*$' "$entry_file" | head -n 1)"
+    if [ -z "$preload_entry" ]; then
+        echo "$entry_file 内容为空, 无法更新 $preload_file"
+        exit 1
+    fi
+
+    if [ -f "$preload_file" ] && grep -Fxq "$preload_entry" "$preload_file"; then
+        echo "$preload_file 已包含 apo preload 配置"
+        return
+    fi
+
+    if [ -f "$preload_file" ]; then
+        cp "$preload_file" "$tmp_file"
+        if [ -s "$tmp_file" ] && [ "$(tail -c 1 "$tmp_file")" != "" ]; then
+            printf '\n' >> "$tmp_file"
+        fi
+    else
+        : > "$tmp_file"
+    fi
+
+    printf '%s\n' "$preload_entry" >> "$tmp_file"
+    chmod 755 "$tmp_file"
+    mv -f "$tmp_file" "$preload_file"
+}
+
 # 移除现有的库包
-if [ -f "/host/etc/ld.so.preload" ]; then
-    mv /host/etc/ld.so.preload /host/etc/ld.so.preload.bak
-fi
 rm -f /host/etc/apo/instrument/libapoinstrument.so
 rm -f /host/etc/apo/instrument/libapoinstrument_musl.so
 rm -f /host/etc/apo/instrument/libapolanucher.so
@@ -43,8 +75,7 @@ mkdir -p /host/etc/apo/instrument
 cp -rf /etc/apo/instrument/* /host/etc/apo/instrument/
 chmod -R 755 /host/etc/apo
 
-# 拷贝新的/etc/ld.so.preload
-cp /host/etc/apo/instrument/apo.ld.so.preload /host/etc/ld.so.preload
-chmod 755 /host/etc/ld.so.preload
+# 检查并插入/etc/ld.so.preload, 保留已有配置
+install_ld_so_preload
 
 echo "apo-preload 安装完成"
