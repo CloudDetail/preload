@@ -113,6 +113,8 @@ pub fn inspect(
                         language_type = PYTHON_LANGUAGE;
                     } else if argv_str.contains("node") {
                         language_type = NODEJS_LANGUAGE;
+                    } else if argv_str.contains("dotnet") {
+                        language_type = DOTNET_LANGUAGE;
                     }
                 }
                 argv_idx += 1;

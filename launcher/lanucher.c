@@ -50,7 +50,8 @@ static int current_process_may_need_instrument(void) {
     cmdline[n] = '\0';
     return strstr(cmdline, "java") != NULL
         || strstr(cmdline, "python") != NULL
-        || strstr(cmdline, "node") != NULL;
+        || strstr(cmdline, "node") != NULL
+        || strstr(cmdline, "dotnet") != NULL;
 }
 
 void init_execve_apo(int argc, char **argv, char **envp) __attribute__((constructor));

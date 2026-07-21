@@ -1,7 +1,7 @@
 use ini::Ini;
 use regex::Regex;
 
-use crate::inspector::{InspectResult, JAVA_LANGUAGE};
+use crate::inspector::{InspectResult, DOTNET_LANGUAGE, JAVA_LANGUAGE};
 
 const INSTRUMENT_CONF_PATH: &str = "/etc/apo/instrument/libapoinstrument.conf";
 const JAVA_SERVICE_NAME_SECTION: &str = "java-service-name";
@@ -11,8 +11,38 @@ const SERVICE_NAME_PLACEHOLDER: &str = "${service_name}";
 pub fn auto_discover_service_name(res: &InspectResult) -> Option<String> {
     match res.language_type {
         JAVA_LANGUAGE => auto_discover_java_service_name(&res.original_argv),
+        DOTNET_LANGUAGE => auto_discover_dotnet_service_name(&res.original_argv),
         _ => None,
     }
+}
+
+// dotnet [options] xxx.dll [args...]
+//     -> xxx
+fn auto_discover_dotnet_service_name(argvs: &[String]) -> Option<String> {
+    let mut dotnet_cmd_start = false;
+
+    for argv in argvs {
+        if !dotnet_cmd_start {
+            if argv.eq("dotnet") || argv.ends_with("/dotnet") {
+                dotnet_cmd_start = true;
+            }
+            continue;
+        }
+
+        if argv.starts_with('-') {
+            continue;
+        }
+
+        if let Some(dll_index) = argv.rfind(".dll") {
+            let filename_index = argv.rfind('/').map(|pos| pos + 1).unwrap_or(0);
+            if filename_index >= dll_index {
+                return None;
+            }
+            return Some(argv[filename_index..dll_index].to_ascii_lowercase());
+        }
+    }
+
+    None
 }
 
 // auto_discover_java_service_name
@@ -224,6 +254,26 @@ mod tests {
         assert_eq!(
             auto_discover_java_service_name(&args),
             Some("requesttemplate-demo".to_string())
+        );
+    }
+
+    #[test]
+    fn dotnet_service_name_uses_dll_filename() {
+        let args = argvs(&["dotnet", "/opt/apps/Order.Api.dll"]);
+
+        assert_eq!(
+            auto_discover_dotnet_service_name(&args),
+            Some("order.api".to_string())
+        );
+    }
+
+    #[test]
+    fn dotnet_service_name_skips_options_before_dll() {
+        let args = argvs(&["/usr/bin/dotnet", "--roll-forward", "Major", "Worker.dll"]);
+
+        assert_eq!(
+            auto_discover_dotnet_service_name(&args),
+            Some("worker".to_string())
         );
     }
 }
