@@ -42,6 +42,39 @@ install_ld_so_preload() {
     mv -f "$tmp_file" "$preload_file"
 }
 
+configure_dotnet_profiler_path() {
+    local machine_arch
+    local dotnet_arch
+    local profiler_relative_path
+
+    if [ ! -d "/instrumentations/dotnet" ]; then
+        return
+    fi
+
+    machine_arch="$(uname -m)"
+    case "$machine_arch" in
+        x86_64|amd64)
+            dotnet_arch="x64"
+            ;;
+        aarch64|arm64)
+            dotnet_arch="arm64"
+            ;;
+        *)
+            echo "不支持的 .NET 自动注入架构: $machine_arch"
+            exit 1
+            ;;
+    esac
+
+    profiler_relative_path="linux-${dotnet_arch}/OpenTelemetry.AutoInstrumentation.Native.so"
+    if [ ! -f "/instrumentations/dotnet/${profiler_relative_path}" ]; then
+        echo "/instrumentations/dotnet/${profiler_relative_path} 不存在, .NET 探针包与当前架构不匹配"
+        exit 1
+    fi
+
+    export APO_DOTNET_PROFILER_PATH="/etc/apo/instrumentations/dotnet/${profiler_relative_path}"
+    echo "使用 .NET profiler: $APO_DOTNET_PROFILER_PATH"
+}
+
 # 移除现有的库包
 rm -f /host/etc/apo/instrument/libapoinstrument.so
 rm -f /host/etc/apo/instrument/libapoinstrument_musl.so
@@ -68,6 +101,7 @@ if [ -z "$APO_DISABLE_CUSTOM_AGNET" ] && [ -f "/instrumentations/custom/libapoin
 fi
 
 # 加载环境变量以更新配置文件
+configure_dotnet_profiler_path
 ini-merger /etc/apo/instrument/libapoinstrument.conf
 
 # 拷贝新的instrument库
